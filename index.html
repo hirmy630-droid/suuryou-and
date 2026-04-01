@@ -59,6 +59,8 @@
     .big-result { display: flex; align-items: baseline; gap: 4px; white-space: nowrap; min-height: 36px; }
     .big-result .num { font-size: 30px; font-weight: 800; color: var(--accent); }
     .big-result .unit { color: #d1d1d6; font-weight: 700; }
+    .result-detail { padding: 0 12px 12px; color: var(--muted); font-weight: 700; line-height: 1.5; }
+    .result-detail .accent { color: var(--accent); }
 
     .field-row { min-height: 52px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px; }
     .field-row:last-child { border-bottom: 0; }
@@ -338,6 +340,13 @@
       function renderQuantityPage() {
         const v1 = safeInt(state.qtyVal1, 0); const v2 = safeInt(state.qtyVal2, 0);
         const resValue = v2 > 0 ? Math.ceil(v1 / v2) : 0;
+        const fullCount = v2 > 0 ? Math.floor(v1 / v2) : 0;
+        const remainder = v2 > 0 ? (v1 % v2) : 0;
+        const detailText = v2 > 0
+          ? (remainder > 0
+              ? `${fullCount}本+${remainder}=<span class="accent mono">${resValue}本</span>`
+              : `${fullCount}本=<span class="accent mono">${resValue}本</span>`)
+          : '';
         el.pageQuantity.innerHTML = `
           <div class="card">
             <div class="field-row">
@@ -349,12 +358,22 @@
           </div>
           <div class="card">
             <div class="section-head"><div class="left">計算結果</div><div class="big-result">${v2 > 0 ? `<span class="num mono">${resValue}</span><span class="unit">本</span>` : ''}</div></div>
+            ${v2 > 0 ? `<div class="result-detail mono">${v1}÷${v2} → ${detailText}</div>` : ''}
             <div class="section-head" style="border-bottom:0; background:none;"><div class="left" style="color:var(--muted)">履歴</div><button class="mini-btn" id="saveQtyBtn">結果を保存</button></div>
             <div class="history-list" id="qh-list">
-              ${state.qtyHistory.length ? state.qtyHistory.map(h => `
-                <div class="history-item"><div class="history-main"><div class="history-title">${escapeHtml(h.memo)}</div><div class="history-sub mono">${h.val1}÷${h.val2}= <span style="color:var(--accent);font-weight:700">${h.result}</span> 本</div></div>
+              ${state.qtyHistory.length ? state.qtyHistory.map(h => {
+                const historyText = h.detailText || (() => {
+                  const hv1 = safeInt(h.val1, 0);
+                  const hv2 = safeInt(h.val2, 0);
+                  const hFull = hv2 > 0 ? Math.floor(hv1 / hv2) : 0;
+                  const hRem = hv2 > 0 ? (hv1 % hv2) : 0;
+                  const hRes = hv2 > 0 ? Math.ceil(hv1 / hv2) : 0;
+                  return hRem > 0 ? `${hFull}本+${hRem}=${hRes}本` : `${hFull}本=${hRes}本`;
+                })();
+                return `
+                <div class="history-item"><div class="history-main"><div class="history-title">${escapeHtml(h.memo)}</div><div class="history-sub mono">${historyText}</div></div>
                 <button class="danger-btn" data-del-qh="${h.id}">削除</button></div>
-              `).join('') : `<div class="empty-note">履歴はありません</div>`}
+              `}).join('') : `<div class="empty-note">履歴はありません</div>`}
             </div>
           </div>
         `;
@@ -367,7 +386,7 @@
 
         document.getElementById('saveQtyBtn').onclick = () => {
           if (v2 <= 0) { showToast('数値を正しく入力してください'); return; }
-          state.qtyHistory.unshift({ id: uid('qh'), memo: state.qtyMemo.trim() || '無題', val1: v1, val2: v2, result: resValue, time: new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }) });
+          state.qtyHistory.unshift({ id: uid('qh'), memo: state.qtyMemo.trim() || '無題', val1: v1, val2: v2, result: resValue, detailText: remainder > 0 ? `${fullCount}本+${remainder}=${resValue}本` : `${fullCount}本=${resValue}本`, time: new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }) });
           saveState(); render(); showToast('保存しました');
         };
         el.pageQuantity.querySelectorAll('[data-del-qh]').forEach(b => b.onclick = () => { state.qtyHistory = state.qtyHistory.filter(x => x.id !== b.dataset.delQh); render(); });
