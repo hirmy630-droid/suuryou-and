@@ -100,6 +100,7 @@
 
     .row-item { border: 1px solid rgba(255,255,255,.06); border-radius: 10px; padding: 10px; background: rgba(0,0,0,.12); margin-bottom: 8px; }
     .row-top { display: flex; align-items: center; width: 100%; }
+    .row-bottom { display: flex; align-items: center; width: 100%; margin-top: 8px; }
     .row-add-btn, .outline-btn, .primary-btn { min-height: 46px; border-radius: 12px; padding: 0 14px; font-weight: 800; }
     .row-add-btn, .outline-btn { border: 1px dashed var(--line2); color: var(--muted); background: rgba(255,255,255,.02); width: 100%; }
     .primary-btn { background: var(--accent); color: #fff; width: 100%; }
@@ -115,6 +116,7 @@
     .modal-content { background: var(--panel); width: 100%; max-width: 520px; border-radius: 20px 20px 0 0; padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); box-shadow: 0 -10px 40px rgba(0,0,0,0.5); animation: slideUp 0.2s ease-out; }
     @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
     .modal-header { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; padding: 0 4px; }
+    .modal-context-label { font-size: 15px; font-weight: 700; color: #d1d1d6; min-height: 22px; }
     .modal-result-wrap { display: flex; align-items: baseline; gap: 8px; }
     /* ポップアップ内の数字フォントサイズを数値と同じ26pxに設定 */
     .modal-total { font-size: 26px; font-weight: 600; color: var(--accent); letter-spacing: .02em; }
@@ -165,6 +167,7 @@
   <div class="modal-overlay" id="modalKeypad">
     <div class="modal-content">
       <div class="modal-header">
+        <div class="modal-context-label" id="modalContextLabel"></div>
         <div class="modal-result-wrap mono">
           <div class="modal-total" id="modalDisplayTotal">0</div>
           <div class="modal-temp" id="modalDisplayTemp"></div>
@@ -203,6 +206,7 @@
         modalKeypadContainer: document.getElementById('modalKeypadContainer'),
         modalDisplayTotal: document.getElementById('modalDisplayTotal'),
         modalDisplayTemp: document.getElementById('modalDisplayTemp'),
+        modalContextLabel: document.getElementById('modalContextLabel'),
         tabs: Array.from(document.querySelectorAll('.tab')),
       };
 
@@ -242,8 +246,27 @@
         render();
       }
 
+
+      function getFocusedInputLabel() {
+        const f = state.focusedInput;
+        if (f === 'val1' || f === 'val2') {
+          return (state.qtyMemo || '').trim() || '数量計算';
+        }
+        if (f.startsWith('p-qty-')) {
+          const p = f.split('-');
+          const set = state.projectSets.find(s => s.id === p[2]);
+          const item = set && set.items.find(i => i.id === p[3]);
+          const title = (set?.title || '').trim();
+          const partName = (item?.partName || '').trim();
+          if (title && partName) return `${title} / ${partName}`;
+          return title || partName || '部材数量';
+        }
+        return '';
+      }
+
       function updateModalDisplay() {
         let currentTotal = 0;
+        el.modalContextLabel.textContent = getFocusedInputLabel();
         const f = state.focusedInput;
         if (f === 'val1') currentTotal = safeInt(state.qtyVal1, 0);
         else if (f === 'val2') currentTotal = safeInt(state.qtyVal2, 0);
@@ -344,7 +367,9 @@
                   <div class="row-item">
                     <div class="row-top">
                       <div class="select-wrap part-select"><select data-sid="${set.id}" data-iid="${item.id}" class="part-name-select"><option value="">部材を選択</option>${(state.masterData.find(m => m.title === set.title)?.parts || []).map(p => `<option value="${escapeAttr(p.name)}" ${p.name === item.partName ? 'selected' : ''}>${escapeHtml(p.name)}</option>`).join('')}</select></div>
-                      <div class="qty-input-box" data-qty-focus="p-qty-${set.id}-${item.id}"><div class="label" style="min-width:auto">数量</div><div class="qty-display mono">${item.quantity || '0'}</div><div class="unit-sm">個</div></div>
+                    </div>
+                    <div class="row-bottom">
+                      <div class="qty-input-box" data-qty-focus="p-qty-${set.id}-${item.id}" style="flex:1;margin-left:0;"><div class="label" style="min-width:auto">数量</div><div class="qty-display mono">${item.quantity || '0'}</div><div class="unit-sm">個</div></div>
                     </div>
                   </div>
                 `).join('')}
