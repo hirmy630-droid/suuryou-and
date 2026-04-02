@@ -76,10 +76,12 @@
     .history-item, .parts-history-item, .set-card, .master-card { background: var(--panel2); border: 1px solid var(--line); border-radius: 12px; padding: 10px; }
     .history-item { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
     .history-main { min-width: 0; flex: 1; }
-    .history-title { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .history-title { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: baseline; }
+    .history-title .div-val { font-size: 12px; color: var(--muted2); font-weight: 600; margin-left: 6px; }
     .history-sub { color: var(--muted); }
 
-    .danger-btn, .icon-btn { color: var(--muted2); padding: 8px; border-radius: 8px; background: rgba(255,255,255,.02); font-weight: 700; }
+    .danger-btn, .icon-btn { padding: 8px; border-radius: 8px; background: rgba(255,255,255,.02); font-weight: 700; color: var(--muted2); }
+    .silver-btn { padding: 8px; border-radius: 8px; background: #d1d1d6; color: #1c1c1e; font-weight: 700; }
     .mini-btn { background: var(--btn2); color: #fff; border-radius: 8px; padding: 7px 10px; font-weight: 700; white-space: nowrap; }
 
     .set-head { display: flex; gap: 8px; align-items: center; border-bottom: 2px solid var(--line2); padding-bottom: 8px; margin-bottom: 8px; }
@@ -120,7 +122,6 @@
     .modal-header { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; padding: 0 4px; }
     .modal-context-label { font-size: 15px; font-weight: 700; color: #d1d1d6; min-height: 22px; }
     .modal-result-wrap { display: flex; align-items: baseline; gap: 8px; }
-    /* ポップアップ内の数字フォントサイズを数値と同じ26pxに設定 */
     .modal-total { font-size: 26px; font-weight: 600; color: var(--accent); letter-spacing: .02em; }
     .modal-temp { font-size: 26px; font-weight: 600; color: var(--muted); letter-spacing: .02em; }
 
@@ -129,8 +130,7 @@
     .key.gray { background: var(--btn2); font-size: 15px; }
     .key.orange { background: var(--accent); }
     .key.span2 { grid-row: span 2; min-height: 112px; }
-    /* 加算キー用特殊スタイル: 数字と同じ背景にオレンジの縁 */
-    .key.add-action-key { background: var(--btn); border: 2px solid var(--accent); }
+    .key.add-action-key { background: var(--btn); color: var(--accent); }
 
     .toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1010; background: var(--success); color: #fff; font-weight: 800; padding: 12px 18px; border-radius: 999px; box-shadow: var(--shadow); display: none; white-space: nowrap; }
     .toast.show { display: block; }
@@ -268,7 +268,6 @@
         render();
       }
 
-
       function getFocusedInputLabel() {
         const f = state.focusedInput;
         if (f === 'val1' || f === 'val2') {
@@ -359,7 +358,7 @@
           <div class="card">
             <div class="section-head"><div class="left">計算結果</div><div class="big-result">${v2 > 0 ? `<span class="num mono">${resValue}</span><span class="unit">本</span>` : ''}</div></div>
             ${v2 > 0 ? `<div class="result-detail mono">${v1}÷${v2} → ${detailText}</div>` : ''}
-            <div class="section-head" style="border-bottom:0; background:none;"><div class="left" style="color:var(--muted)">履歴</div><button class="mini-btn" id="saveQtyBtn">結果を保存</button></div>
+            <div class="section-head" style="border-bottom:0; background:none;"><div class="left" style="color:var(--muted); font-size: 14px;">履歴</div><button class="mini-btn" id="saveQtyBtn" style="background: var(--accent);">結果を保存</button></div>
             <div class="history-list" id="qh-list">
               ${state.qtyHistory.length ? state.qtyHistory.map(h => {
                 const historyText = h.detailText || (() => {
@@ -371,7 +370,7 @@
                   return hRem > 0 ? `${hFull}本+${hRem}=${hRes}本` : `${hFull}本=${hRes}本`;
                 })();
                 return `
-                <div class="history-item"><div class="history-main"><div class="history-title">${escapeHtml(h.memo)}</div><div class="history-sub mono">${historyText}</div></div>
+                <div class="history-item"><div class="history-main"><div class="history-title">${escapeHtml(h.memo)} <span class="div-val">÷${safeInt(h.val2, 0)}</span></div><div class="history-sub mono">${historyText}</div></div>
                 <button class="danger-btn" data-del-qh="${h.id}">削除</button></div>
               `}).join('') : `<div class="empty-note">履歴はありません</div>`}
             </div>
@@ -382,7 +381,11 @@
         document.getElementById('qtyVal2Row').onclick = () => setFocusedInput('val2');
         const mi = document.getElementById('qtyMemoInput');
         mi.oninput = (e) => { state.qtyMemo = e.target.value; saveState(); };
-        mi.onfocus = () => { state.focusedInput = 'memo'; };
+        mi.onfocus = (e) => { 
+          state.focusedInput = 'memo'; 
+          // フォーカス時に少し遅延させて全選択を実行（スマホブラウザでの動作安定のため）
+          setTimeout(() => { e.target.select(); }, 10);
+        };
 
         document.getElementById('saveQtyBtn').onclick = () => {
           if (v2 <= 0) { showToast('数値を正しく入力してください'); return; }
@@ -399,7 +402,7 @@
               <div class="set-head">
                 <div class="set-title-label">タイトル</div>
                 <div class="select-wrap"><select data-sid="${set.id}" class="set-title-select"><option value="">選択</option>${state.masterData.map(m => `<option value="${escapeAttr(m.title)}" ${m.title === set.title ? 'selected' : ''}>${escapeHtml(m.title)}</option>`).join('')}</select></div>
-                <button class="danger-btn" data-del-set="${set.id}">削除</button>
+                <button class="silver-btn" data-del-set="${set.id}">削除</button>
               </div>
               <div class="set-list">
                 ${set.items.map(item => `
@@ -409,6 +412,7 @@
                     </div>
                     <div class="row-bottom">
                       <div class="qty-input-box" data-qty-focus="p-qty-${set.id}-${item.id}" style="flex:1;margin-left:0;"><div class="label" style="min-width:auto">数量</div><div class="qty-display mono">${item.quantity || '0'}</div><div class="unit-sm">個</div></div>
+                      <button class="danger-btn" data-del-item-set="${set.id}" data-del-item-id="${item.id}" style="margin-left:8px;">削除</button>
                     </div>
                   </div>
                 `).join('')}
@@ -430,7 +434,18 @@
           saveState(); render();
         });
         el.pageParts.querySelectorAll('[data-qty-focus]').forEach(n => n.onclick = () => setFocusedInput(n.dataset.qtyFocus));
+        
+        // 部材セットの削除
         el.pageParts.querySelectorAll('[data-del-set]').forEach(b => b.onclick = () => { state.projectSets = state.projectSets.filter(s => s.id !== b.dataset.delSet); render(); });
+        
+        // 部材行（アイテム）の削除
+        el.pageParts.querySelectorAll('[data-del-item-set]').forEach(b => b.onclick = () => {
+          const sid = b.dataset.delItemSet;
+          const iid = b.dataset.delItemId;
+          state.projectSets = state.projectSets.map(s => s.id === sid ? { ...s, items: s.items.filter(i => i.id !== iid) } : s);
+          saveState(); render();
+        });
+
         el.pageParts.querySelectorAll('[data-add-row]').forEach(b => b.onclick = () => {
           state.projectSets = state.projectSets.map(s => s.id === b.dataset.addRow ? {...s, items:[...s.items,{id:uid('i'),partName:'',quantity:''}]} : s);
           saveState(); render();
@@ -457,7 +472,7 @@
                   <div class="text-wrap">
                     <input type="text" data-master-title="${master.id}" value="${escapeAttr(master.title)}" placeholder="名目">
                   </div>
-                  <button class="danger-btn" data-delete-master="${master.id}">削除</button>
+                  <button class="silver-btn" data-delete-master="${master.id}">削除</button>
                 </div>
                 <div class="master-subtitle">部材名登録</div>
                 ${master.parts.map(part => `
@@ -523,7 +538,6 @@
         c.querySelector('[data-a="ac"]').onclick = handleAllClear;
         c.querySelector('[data-a="add"]').onclick = executeModalAdd;
         c.querySelector('[data-a="done"]').onclick = () => { 
-          // 完了ボタンが押されたら、入力値を加算してから閉じる
           executeModalAdd(); 
           el.modalKeypad.classList.remove('show'); 
           state.focusedInput=''; 
@@ -565,7 +579,7 @@
   </script>
 
   <script>
-    if ('serviceWorker' in navigator) {
+    if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.protocol === 'http:')) {
       window.addEventListener('load', function () {
         navigator.serviceWorker.register('./sw.js').catch(function (err) {
           console.error('SW registration failed:', err);

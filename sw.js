@@ -1,4 +1,4 @@
-const CACHE_NAME = 'quantity-pwa-31b7b9797f';
+const CACHE_NAME = 'quantity-pwa-20260402-01';
 const APP_SHELL = [
   './',
   './index.html',
